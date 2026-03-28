@@ -1,3 +1,5 @@
+from re import match
+
 import numpy as np
 import time
 from botools import onebyone
@@ -21,7 +23,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.geometry("570x350")
+        self.geometry("980x450")
         self.title("Battleships")
 
         self.size = 10
@@ -47,14 +49,27 @@ class App(ctk.CTk):
         self.ships_placed = 0
         # layout
         self.controls = ctk.CTkFrame(self)
-        self.controls.grid(row=0, column=0, padx=10, pady=10)
+        self.controls.grid(row=1, column=0, padx=10, pady=10)
 
-        self.sea = ctk.CTkFrame(self)
-        self.sea.grid(row=0, column=1, padx=10, pady=10)
+        self.player_board = ctk.CTkFrame(self)
+        self.player_board.grid(row=1, column=1, padx=10, pady=10)
+
+        self.bot_board = ctk.CTkFrame(self)
+        self.bot_board.grid(row=1, column=2, padx=10, pady=10)
+
+        self.board_label = ctk.CTkFrame(self,width=700, height=50)
+        self.board_label.grid(row=0,rowspan=1,column=1, columnspan=2, padx=10, pady=10)
 
         # board
-        self.buttons = []
-        self.create_grid()
+        self.player_cells = []
+        self.bot_cells = []
+        self.create_player_grid()
+        self.create_bot_grid()
+
+        self.player_board_label = ctk.CTkLabel(self.board_label,width=350, height=50,text="Player",font=("Arial", 20))
+        self.player_board_label.grid(row=0, column=0, padx=10, pady=10)
+        self.bot_board_label = ctk.CTkLabel(self.board_label,width=350, height=50,text="Bot",font=("Arial",20))
+        self.bot_board_label.grid(row=0, column=9, padx=10, pady=10)
 
         # control button
         self.bot_face = ctk.CTkLabel(self.controls, text="(╥‸╥)", font=("Arial", 30))
@@ -69,16 +84,16 @@ class App(ctk.CTk):
         self.terminal_text = ctk.CTkLabel(self.controls,width=200, height=50, text="Set your ships", font=("Impact", 20))
         self.terminal_text.grid(row=1, column=0, pady=10)
     #  GRID
-    def create_grid(self):
+    def create_player_grid(self):
         for i in range(self.size):
             row_buttons = []
             for j in range(self.size):
                 btn = ctk.CTkButton(
-                    self.sea,
+                    self.player_board,
                     width=30,
                     height=30,
                     corner_radius=0,
-                    text=self.player_grid[i][j],
+                    text="",
                     fg_color=value_to_green_red(self.player_grid[i][j]),
                     text_color="black",
                     command=lambda r=i, c=j: self.cell_clicked(r, c)
@@ -86,7 +101,26 @@ class App(ctk.CTk):
                 btn.grid(row=i, column=j, padx=1, pady=1)
                 row_buttons.append(btn)
 
-            self.buttons.append(row_buttons)
+            self.player_cells.append(row_buttons)
+
+    def create_bot_grid(self):
+        for i in range(self.size):
+            row_buttons = []
+            for j in range(self.size):
+                btn = ctk.CTkButton(
+                    self.bot_board,
+                    width=30,
+                    height=30,
+                    corner_radius=0,
+                    text="",
+                    fg_color=value_to_green_red(self.player_grid[i][j]),
+                    text_color="black",
+                    command=lambda r=i, c=j: self.cell_clicked(r, c)
+                )
+                btn.grid(row=i, column=j, padx=1, pady=1)
+                row_buttons.append(btn)
+
+            self.bot_cells.append(row_buttons)
 
     # LOGIC
     def cell_clicked(self, row, col):
@@ -100,6 +134,7 @@ class App(ctk.CTk):
         # check valid placement
         if not self.can_place(row, col, length):
             self.terminal_text.configure(text="Out of Bounds")
+            self.bot_face.configure(text="( ˶°ㅁ°) !!")
             return
 
         # preview
@@ -117,7 +152,7 @@ class App(ctk.CTk):
 
         # draw preview (different color!)
         for r, c in cells:
-            self.buttons[r][c].configure(fg_color="yellow", text="P")
+            self.player_cells[r][c].configure(fg_color="yellow", text="?")
             self.terminal_text.configure(text="You Sure?")
             self.bot_face.configure(text="( °ヮ° ) ?")
 
@@ -126,7 +161,7 @@ class App(ctk.CTk):
             self.player_grid[row, col] = 0
 
             onebyone(self.player_grid, self.heat_grid, "heat_map")
-            self.buttons[row][col].configure(text="0", fg_color="red")
+            self.player_cells[row][col].configure(text="0", fg_color="red")
             time.sleep(0.5)
 
             self.update_board()
@@ -146,7 +181,7 @@ class App(ctk.CTk):
                 return False
 
             for i in range(length):
-                if self.player_grid[row + i][col] == "S":
+                if not self.player_grid[row + i][col] == "0":
                     return False
 
         return True
@@ -161,35 +196,37 @@ class App(ctk.CTk):
             else:
                 color = "#00FF00"
 
-            self.buttons[r][c].configure(fg_color=color, text=value)
+            self.player_cells[r][c].configure(fg_color=color, text="")
 
         self.preview_cells = []
 
     def update_board(self):
         for i in range(self.size):
             for j in range(self.size):
-                self.buttons[i][j].configure(
+                self.player_cells[i][j].configure(
                     text=self.player_grid[i][j],
                     fg_color=value_to_green_red(self.player_grid[i][j])
                 )
 
     def confirm(self):
-
-        if not self.preview_cells:
+        if self.ships_placed == len(self.ships_index):
             self.terminal_text.configure(text="LETS GOOO")
             self.bot_face.configure(text="ᕙ(  •̀ ᗜ •́  )ᕗ")
             return
 
-        for r, c in self.preview_cells:
-            self.player_grid[r][c] = self.ships_index[self.ships_placed][0]
-            self.buttons[r][c].configure(fg_color="red", text=self.ships_index[self.ships_placed][0][0])
+        else:
+            for r, c in self.preview_cells:
+                self.player_grid[r][c] = self.ships_index[self.ships_placed][0]
+                self.player_cells[r][c].configure(fg_color="red", text=self.ships_index[self.ships_placed][0][0])
+                self.bot_cells[r][c].configure(border_color="red",border_width=2)
 
-        self.preview_cells = []
-        self.ships_placed += 1
-        self.terminal_text.configure(text="The Ship have sailed")
-        self.bot_face.configure(text=" ദ്ദി(ᵔᗜᵔ)")
-        if self.ships_placed == len(self.ships_index):
-            self.confirm_btn.configure(text="Play!!!")
+            self.preview_cells = []
+            self.ships_placed += 1
+            self.terminal_text.configure(text="The Ship have sailed")
+            self.bot_face.configure(text=" ദ്ദി(ᵔᗜᵔ)")
+
+            if self.ships_placed == len(self.ships_index):
+                self.confirm_btn.configure(text="Play!!!")
 
     def rotate_ship_placement(self):
         if self.ship_orientation == "horizontal":
