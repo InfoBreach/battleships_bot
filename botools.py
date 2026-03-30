@@ -89,3 +89,4 @@ def place_ships_bot(grid):
     return grid
 
 def bot_turn(grid):
+    return None
