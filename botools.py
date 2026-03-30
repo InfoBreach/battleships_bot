@@ -82,9 +82,10 @@ def place_ships_bot(grid):
                 cells = [(row + i, col) for i in range(size)]
 
             # Check no collision with existing ships
-            if all(grid[r, c] == "-" for r, c in cells):
+            if all(grid[r, c] == "" for r, c in cells):
                 for r, c in cells:
                     grid[r, c] = ship_name[0]
                 placed = True
-
     return grid
+
+def bot_turn(grid):
