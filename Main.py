@@ -32,9 +32,9 @@ class App(ctk.CTk):
         self.size = 10
 
         #initialize values
-        self.set_ship = False
-        self.ship_orientation = "horizontal"
 
+        self.ship_orientation = "horizontal"
+        self.set_ship = False
         # grids
         self.player_grid = np.full((10, 10), "", dtype=object) #keep player's ships positions
         self.player_playing_grid = np.full((10, 10), "", dtype=object) #keeps the position of the player's attack attempts.
@@ -221,10 +221,10 @@ class App(ctk.CTk):
                 for j in range(self.size):
                     self.player_cells[i][j].configure(command=lambda r=i, c=j: self.attack(r, c))
             self.bot_grid=place_ships_bot(self.bot_grid)
-            for i in range(self.size):
-                for j in range(self.size):
-                    if not self.bot_grid[i][j] == "":
-                        self.player_cells[i][j].configure(text="x")
+            #for i in range(self.size):
+            #    for j in range(self.size):
+            #        if not self.bot_grid[i][j] == "":
+            #            self.player_cells[i][j].configure(text="x")
             return
 
         # SAFETY: recompute validity instead of trusting old state
@@ -338,9 +338,10 @@ class App(ctk.CTk):
                     return "hit"
 
         elif target == "player":
+            global bot_attack_method, bot_last_hits
             ship_name = self.player_grid[row][col]
 
-            if ship_name == "":  # "0" is your empty cell value
+            if ship_name == "":
                 self.player_grid[row][col] = "o"
                 self.bot_cells[row][col].configure(text="⚫", fg_color="#00FF00")
                 return "miss"
@@ -349,7 +350,9 @@ class App(ctk.CTk):
                 self.bot_cells[row][col].configure(fg_color="red", text="🔴")
 
                 if not np.any(self.player_grid == ship_name):
-                    self.change_interface(f"Bot sunk your {ship_name}!", "(ᗒᗣᗕ)՞")
+                    self.change_interface(f"Bot sunk your ship!", "(ᗒᗣᗕ)՞")
+                    bot_attack_method = "scan"
+                    bot_last_hits = []
                     self.bot_sink_tally += 1
                     if self.bot_sink_tally == 5:
                         self.change_interface("YOU LOSE", "(ᗒᗣᗕ)՞")
@@ -357,20 +360,62 @@ class App(ctk.CTk):
                     return "sink"
                 else:
                     self.change_interface("Bot hit your ship!", "(ᗒᗣᗕ)՞")
+                    bot_attack_method = "hunt"
+                    bot_last_hits.append((row, col))
                     return "hit"
 
         return None
 
+
+#BOT
+bot_attack_method = "scan"
+bot_last_hits = []
+
 def bot_turn(playing_grid, heat_grid):
-    if True:
+    if bot_attack_method == "scan":
         return bot_attack(scan(playing_grid, heat_grid))
     else:
-        return hunt(playing_grid, heat_grid)
+        return hunt(playing_grid)
 def scan(current_grid,wanted_grid):
     for i in range(10):
         for j in range(10):
             wanted_grid[i, j] = (heat_map(current_grid, i, j))
     return wanted_grid
+
+def hunt(playing_grid):
+    global bot_last_hits, bot_attack_method
+
+    candidates = []
+    for (hr, hc) in bot_last_hits:
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nr, nc = hr + dr, hc + dc
+            if (0 <= nr < 10 and 0 <= nc < 10
+                    and playing_grid[nr][nc] == ""
+                    and (nr, nc) not in candidates):
+                candidates.append((nr, nc))
+
+    if candidates:
+        if len(bot_last_hits) > 1:
+            aligned = get_aligned(bot_last_hits, candidates)
+            if aligned:
+                return random.choice(aligned)
+        return random.choice(candidates)
+
+    # queue exhausted, fall back to scan
+    bot_attack_method = "scan"
+    bot_last_hits = []
+    return bot_attack(scan(playing_grid, np.full((10, 10), "", dtype=object)))
+
+
+def get_aligned(hits, candidates):
+    rows = [h[0] for h in hits]
+    cols = [h[1] for h in hits]
+
+    if len(set(rows)) == 1:        # same row → horizontal
+        return [(r, c) for r, c in candidates if r == rows[0]]
+    elif len(set(cols)) == 1:      # same col → vertical
+        return [(r, c) for r, c in candidates if c == cols[0]]
+    return candidates
 
 def bot_attack(heat_grid):
     possible_cells = get_biggest_cell(heat_grid)
