@@ -1,9 +1,6 @@
 
 import random
 
-
-
-
 def place_ships_bot(grid):
     """Randomly place all battleship ships on the grid without collisions."""
     ships = {

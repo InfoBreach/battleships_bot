@@ -1,48 +1,33 @@
 import random
 import numpy as np
 import time
-from botools import place_ships_bot
 import customtkinter as ctk
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-
-
-def value_to_green_red(v):
-    v = int(v)
-    v = max(0, min(16, v))
-    ratio = v / 16
-    r = int(255 * ratio)
-    g = int(255 * (1 - ratio))
-    return f"#{r:02x}{g:02x}00"
-
-
-
-
 class App(ctk.CTk):
-
     def __init__(self):
         super().__init__()
 
+        self.turns = 0
         self.placeable = None
         self.geometry("980x450")
         self.title("Battleships")
-
         self.size = 10
 
         #initialize values
-
         self.ship_orientation = "horizontal"
         self.set_ship = False
-        # grids
-        self.player_grid = np.full((10, 10), "", dtype=object) #keep player's ships positions
-        self.player_playing_grid = np.full((10, 10), "", dtype=object) #keeps the position of the player's attack attempts.
-        self.preview_grid = np.full((10, 10), "", dtype=object) #universal temporary grid, is cleared constantly
 
-        self.bot_grid = np.full((10, 10), "", dtype=object) #keep bot's ships positions.
-        self.bot_playing_grid = np.full((10, 10), "", dtype=object) #keep the position of the bot's attack attempts.
-        self.heat_grid = np.full((10, 10), "", dtype=object) #keep track on how likely a ship is there
+        #create arrays
+        self.player_grid = np.full((10, 10), "", dtype=object)
+        self.player_playing_grid = np.full((10, 10), "", dtype=object)
+        self.preview_grid = np.full((10, 10), "", dtype=object)
+
+        self.bot_grid = np.full((10, 10), "", dtype=object)
+        self.bot_playing_grid = np.full((10, 10), "", dtype=object)
+        self.heat_grid = np.full((10, 10), "", dtype=object)
 
         self.preview_cells = []
         self.player_sink_tally = 0
@@ -58,6 +43,7 @@ class App(ctk.CTk):
         ]
         self.ships_placed = 0
         self.ships_hit = []
+
         # layout
         self.controls = ctk.CTkFrame(self)
         self.controls.grid(row=1, column=0, padx=10, pady=10)
@@ -94,7 +80,11 @@ class App(ctk.CTk):
 
         self.terminal_text = ctk.CTkLabel(self.controls,width=200, height=50, text="Set your ships", font=("Impact", 20))
         self.terminal_text.grid(row=1, column=0, pady=10)
-    #  GRID
+
+        self.turn_counter = ctk.CTkLabel(self.controls, text="Turns: 0", font=("Impact", 40))
+        self.turn_counter.grid(row=6,column=0, padx=10, pady=10)
+
+    # UI / GRID
     def create_player_grid(self):
         for i in range(self.size):
             row_buttons = []
@@ -139,7 +129,21 @@ class App(ctk.CTk):
         if not face == "":
             self.bot_face.configure(text=face)
 
-    # LOGIC
+    def reset_board_interface(self,board):
+        for i in range(self.size):
+            for j in range(self.size):
+                if board == "player":
+                   self.player_cells[i][j].configure(fg_color="#00FF00", text="")
+                if board == "bot":
+                    self.bot_cells[i][j].configure(fg_color="#00FF00", text="")
+
+    def update_board(self):
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.bot_playing_grid[i][j] == "":
+                    self.bot_cells[i][j].configure(fg_color=value_to_green_red(self.heat_grid[i][j]))
+
+    # PLACEMENT
     def cell_clicked(self, row, col):
         self.clear_preview()
         print(f"Clicked {row+1}, {col+1}")
@@ -149,12 +153,10 @@ class App(ctk.CTk):
 
         name, length = self.ships_index[self.ships_placed]
 
-        # check valid placement
         if not self.can_place(row, col, length):
             self.change_interface("Out of Bounds","( ˶°ㅁ°) !!")
             return
 
-        # preview
         cells = []
 
         if self.ship_orientation == "horizontal":
@@ -164,18 +166,14 @@ class App(ctk.CTk):
             for i in range(length):
                 cells.append((row + i, col))
 
-        # store preview
         self.preview_cells = cells
 
-        # draw preview (different color!)
         for r, c in cells:
             self.player_cells[r][c].configure(fg_color="yellow", text="?")
             self.change_interface("You Sure?", "( °ヮ° ) ?")
 
         if self.set_ship == True:
             self.player_grid[row, col] = 0
-
-
             self.update_board()
 
     def can_place(self, row, col, length):
@@ -207,11 +205,6 @@ class App(ctk.CTk):
             self.player_cells[r][c].configure(fg_color="#00FF00", text="",border_color="#00FF00")
         self.preview_cells = []
 
-    def update_board(self):
-        for i in range(self.size):
-            for j in range(self.size):
-                self.bot_cells[i][j].configure(fg_color=value_to_green_red(self.player_grid[i][j]))
-
     def confirm_place(self):
         if self.ships_placed == len(self.ships_index):
             self.change_interface("LETS GOOO", "ᕙ(  •̀ ᗜ •́  )ᕗ")
@@ -221,13 +214,8 @@ class App(ctk.CTk):
                 for j in range(self.size):
                     self.player_cells[i][j].configure(command=lambda r=i, c=j: self.attack(r, c))
             self.bot_grid=place_ships_bot(self.bot_grid)
-            #for i in range(self.size):
-            #    for j in range(self.size):
-            #        if not self.bot_grid[i][j] == "":
-            #            self.player_cells[i][j].configure(text="x")
             return
 
-        # SAFETY: recompute validity instead of trusting old state
         if not self.preview_cells:
             return
 
@@ -238,14 +226,13 @@ class App(ctk.CTk):
             self.placeable = False
             return
 
-        # place ship
         for r, c in self.preview_cells:
             self.player_grid[r][c] = name
             self.player_cells[r][c].configure(
                 fg_color="red",
                 text=name[0]
             )
-            self.bot_cells[r][c].configure(border_color="red", border_width=2)
+            self.bot_cells[r][c].configure(border_color="blue", border_width=2)
 
         self.preview_cells = []
         self.ships_placed += 1
@@ -267,15 +254,7 @@ class App(ctk.CTk):
 
         self.bot_face.pack_forget()
 
-    def reset_board_interface(self,board):
-        for i in range(self.size):
-            for j in range(self.size):
-                if board == "player":
-                   self.player_cells[i][j].configure(fg_color="#00FF00", text="")
-                if board == "bot":
-                    self.bot_cells[i][j].configure(fg_color="#00FF00", text="")
-
-    #ATTACK
+    # ATTACK
     def attack(self,row,col):
         self.clear_preview()
         print(f"Clicked {row + 1}, {    col + 1} attack")
@@ -283,9 +262,6 @@ class App(ctk.CTk):
             return
         if self.show_player_heatmap == True:
             return
-    # onebyone(self.player_grid, self.heat_grid, "heat_map")
-    # self.player_cells[row][col].configure(text="0", fg_color="red")
-    # time.sleep(0.5)
 
     def can_attack(self,row,col):
         if self.player_playing_grid[row][col] == "":
@@ -305,20 +281,27 @@ class App(ctk.CTk):
         self.player_playing_grid[row][col] = "x"
         result = self.check_attack("bot", row, col)
         if result in ("player win",):
+            for i in range(10):
+                for j in range(10):
+                    self.player_cells[i][j].configure(command = self.null)
             return
 
+        time.sleep(0)
         x, y = bot_turn(self.bot_playing_grid, self.heat_grid)
         self.bot_playing_grid[x][y] = "x"
         self.check_attack("player", x, y)
+        self.update_board()
+        self.turns +=1
+        self.turn_counter.configure(text=f"Turns: {str(self.turns)}")
 
     def check_attack(self, target, row, col):
         if target == "bot":
-            ship_name = self.bot_grid[row][col]  # grab first, before any branching
+            ship_name = self.bot_grid[row][col]
 
             if ship_name == "":
                 self.bot_grid[row][col] = "o"
                 self.player_cells[row][col].configure(text="⚫", border_color="#00FF00")
-                self.change_interface("Miss!", "(╥‸╥)")
+                self.player_board_label.configure(text="Miss")
                 return "miss"
             else:
                 self.ships_hit.append((row, col))
@@ -326,7 +309,7 @@ class App(ctk.CTk):
                 self.player_cells[row][col].configure(fg_color="red", text="🔴")
 
                 if not np.any(self.bot_grid == ship_name):
-                    self.change_interface("YOU sunk a ship", "ᕙ(  •̀ ᗜ •́  )ᕗ")
+                    self.player_board_label.configure(text = "You sunk a ship!!!")
                     self.player_sink_tally += 1
                     if self.player_sink_tally == 5:
                         self.change_interface(f"YOU WIN", "ᕙ(  •̀ ᗜ •́  )ᕗ")
@@ -344,6 +327,7 @@ class App(ctk.CTk):
             if ship_name == "":
                 self.player_grid[row][col] = "o"
                 self.bot_cells[row][col].configure(text="⚫", fg_color="#00FF00")
+                self.bot_board_label.configure(text="Miss")
                 return "miss"
             else:
                 self.player_grid[row][col] = "x"
@@ -351,40 +335,73 @@ class App(ctk.CTk):
 
                 if not np.any(self.player_grid == ship_name):
                     self.change_interface(f"Bot sunk your ship!", "(ᗒᗣᗕ)՞")
+                    self.bot_board_label.configure(text="Sink")
                     bot_attack_method = "scan"
                     bot_last_hits = []
                     self.bot_sink_tally += 1
                     if self.bot_sink_tally == 5:
-                        self.change_interface("YOU LOSE", "(ᗒᗣᗕ)՞")
+                        self.change_interface("YOU LOSE", "⎛⎝ ≽  >  ⩊   < ≼ ⎠⎞՞")
                         return "bot win"
                     return "sink"
                 else:
                     self.change_interface("Bot hit your ship!", "(ᗒᗣᗕ)՞")
+                    self.bot_board_label.configure(text="Hit")
                     bot_attack_method = "hunt"
                     bot_last_hits.append((row, col))
                     return "hit"
 
         return None
 
+    def null(self):
+        return None
 
-#BOT
+# BOT
 bot_attack_method = "scan"
 bot_last_hits = []
 
+def place_ships_bot(grid):
+    ships = {
+        "Mothership":    5,
+        "Battleship": 4,
+        "Submarines":    3,
+        "Cruiser":    3,
+        "Destroyer":  2,
+    }
+
+    for ship_name, size in ships.items():
+        placed = False
+        while not placed:
+            direction = random.choice(["H", "V"])
+            if direction == "H":
+                row = random.randint(0, 9)
+                col = random.randint(0, 10 - size)
+                cells = [(row, col + i) for i in range(size)]
+            else:
+                row = random.randint(0, 10 - size)
+                col = random.randint(0, 9)
+                cells = [(row + i, col) for i in range(size)]
+
+            if all(grid[r, c] == "" for r, c in cells):
+                for r, c in cells:
+                    grid[r, c] = ship_name[0]
+                placed = True
+    return grid
+
 def bot_turn(playing_grid, heat_grid):
+    bot_attack(scan(playing_grid, heat_grid)) #Duplicate calls to always update the heatmap.
     if bot_attack_method == "scan":
         return bot_attack(scan(playing_grid, heat_grid))
     else:
-        return hunt(playing_grid)
+        return hunt(playing_grid, heat_grid)
+
 def scan(current_grid,wanted_grid):
     for i in range(10):
         for j in range(10):
             wanted_grid[i, j] = (heat_map(current_grid, i, j))
     return wanted_grid
 
-def hunt(playing_grid):
+def hunt(playing_grid, heat_grid):
     global bot_last_hits, bot_attack_method
-
     candidates = []
     for (hr, hc) in bot_last_hits:
         for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
@@ -393,27 +410,23 @@ def hunt(playing_grid):
                     and playing_grid[nr][nc] == ""
                     and (nr, nc) not in candidates):
                 candidates.append((nr, nc))
-
     if candidates:
         if len(bot_last_hits) > 1:
             aligned = get_aligned(bot_last_hits, candidates)
             if aligned:
                 return random.choice(aligned)
         return random.choice(candidates)
-
-    # queue exhausted, fall back to scan
     bot_attack_method = "scan"
     bot_last_hits = []
-    return bot_attack(scan(playing_grid, np.full((10, 10), "", dtype=object)))
-
+    return bot_attack(scan(playing_grid, heat_grid))
 
 def get_aligned(hits, candidates):
     rows = [h[0] for h in hits]
     cols = [h[1] for h in hits]
 
-    if len(set(rows)) == 1:        # same row → horizontal
+    if len(set(rows)) == 1:
         return [(r, c) for r, c in candidates if r == rows[0]]
-    elif len(set(cols)) == 1:      # same col → vertical
+    elif len(set(cols)) == 1:
         return [(r, c) for r, c in candidates if c == cols[0]]
     return candidates
 
@@ -428,14 +441,11 @@ def get_biggest_cell(grid):
     for i in range(len(grid)):
         for j in range(len(grid[i])):
             val = int(grid[i][j])
-
             if val > max_val:
                 max_val = val
                 positions = [(i, j)]
-
             elif val == max_val:
                 positions.append((i, j))
-
     return positions
 
 def heat_map(grid, row, col):
@@ -444,12 +454,11 @@ def heat_map(grid, row, col):
     rows, cols = 10, 10
     score = 0
     directions = [
-        (-1, 0),  # Up
-        ( 1, 0),  # Down
-        ( 0,-1),  # Left
-        ( 0, 1),]  # Right
+        (-1, 0),
+        ( 1, 0),
+        ( 0,-1),
+        ( 0, 1),]
 
-    # Start scanning around
     for dr, dc in directions:
         for step in range(1, 5):
             new_row = row + dr * step
@@ -462,6 +471,16 @@ def heat_map(grid, row, col):
             else:
                 break
     return score
+
+# A heat-map overlay, red means most likely to have a ship there.
+def value_to_green_red(v):
+    v = int(v)
+    v = max(0, min(16, v))
+    ratio = v / 16
+    r = int(255 * ratio)
+    g = int(255 * (1 - ratio))
+    return f"#{r:02x}{g:02x}00"
+
 
 # run
 app = App()
