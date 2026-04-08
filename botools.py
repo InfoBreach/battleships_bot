@@ -1,8 +1,10 @@
+#ALL FUNCTIONS HAD BEEN MOVE TO Main.py for convenient
+#This file had been retired
 
+""""""
 import random
 
 def place_ships_bot(grid):
-    """Randomly place all battleship ships on the grid without collisions."""
     ships = {
         "Mothership":    5,
         "Battleship": 4,
@@ -23,11 +25,9 @@ def place_ships_bot(grid):
                 row = random.randint(0, 10 - size)  # Ensure it fits
                 col = random.randint(0, 9)
                 cells = [(row + i, col) for i in range(size)]
-
             # Check no collision with existing ships
             if all(grid[r, c] == "" for r, c in cells):
                 for r, c in cells:
                     grid[r, c] = ship_name[0]
                 placed = True
     return grid
-
