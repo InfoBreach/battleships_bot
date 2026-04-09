@@ -127,6 +127,7 @@ class App(ctk.CTk):
             self.bot_cells.append(row_buttons)
 
     def full_reset(self):
+        global bot_attack_method
         self.player_grid = np.full((10, 10), "", dtype=object)
         self.player_playing_grid = np.full((10, 10), "", dtype=object)
         self.preview_grid = np.full((10, 10), "", dtype=object)
@@ -150,6 +151,7 @@ class App(ctk.CTk):
         self.change_interface("Place your ship", ": )")
         self.auto_attack = False
         self.allow_auto_attack = False
+        bot_attack_method = "scan"
         self.auto_attack_btn.configure(text="Auto Place", fg_color="#1f6aa5")
         for i in range(10):
             for j in range(10):
