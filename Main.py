@@ -70,7 +70,7 @@ class App(ctk.CTk):
         self.bot_board_label.grid(row=0, column=9, padx=10, pady=10)
 
         # control buttons
-        self.bot_face = ctk.CTkLabel(self.controls, text="(╥‸╥)", font=("Arial", 30))
+        self.bot_face = ctk.CTkLabel(self.controls, text="﹏𓊝﹏", font=("Arial", 30))
         self.bot_face.grid(row=0, column=0, pady=10)
 
         self.versatile_btn = ctk.CTkButton(self.controls, text="Change to Vertical", command=self.rotate_ship_placement)
@@ -128,6 +128,7 @@ class App(ctk.CTk):
 
     def full_reset(self):
         global bot_attack_method
+        self.change_interface("Back for more punishment?", "(¬‿¬)")
         self.player_grid = np.full((10, 10), "", dtype=object)
         self.player_playing_grid = np.full((10, 10), "", dtype=object)
         self.preview_grid = np.full((10, 10), "", dtype=object)
@@ -270,7 +271,7 @@ class App(ctk.CTk):
     # This function locks the ship placement in place.
     def confirm_place(self):
         if self.ships_placed == len(self.ships_index):
-            self.change_interface("LETS GOOO", "ᕙ(  •̀ ᗜ •́  )ᕗ")
+            self.change_interface("Alright, take your shot.", "( ͡° ͜ʖ ͡°)")
             self.reset_board_interface("player")
             self.confirm_btn.configure(text="ATTACK!!!", command=lambda: self.confirm_attack())
             self.allow_auto_attack = True
@@ -294,9 +295,10 @@ class App(ctk.CTk):
             self.bot_cells[r][c].configure(border_color="blue", border_width=2)
         self.preview_cells = []
         self.ships_placed += 1
-        self.change_interface("The Ship has sailed", "ദ്ദി(ᵔᗜᵔ)")
+        self.change_interface("Noted. I'll sink it.", "( ͡~ ͜ʖ ͡°)")
         if self.ships_placed == len(self.ships_index):
             self.confirm_btn.configure(text="Play!!!")
+            self.change_interface("Finally. Let's go.", "(ง'̀-'́)ง")
             self.versatile_btn.configure(text="Reset", command=self.full_reset)
 
     # Change the ship placement orientation
@@ -357,6 +359,8 @@ class App(ctk.CTk):
                 self.bot_grid[row][col] = "o"
                 self.player_cells[row][col].configure(text="⚫", border_color="#00FF00")
                 self.player_board_label.configure(text="Miss")
+                self.change_interface(random.choice(["Haha, missed!", "Is that your best?",]),
+                                      random.choice(["( ͡~ ͜ʖ ͡°)", "¯\\_(ツ)_/¯", "lol"]))
                 return "miss"
             else:
                 self.ships_hit.append((row, col))
@@ -365,16 +369,19 @@ class App(ctk.CTk):
 
                 if not np.any(self.bot_grid == ship_name):
                     self.player_board_label.configure(text="You sunk a ship!!!")
+                    self.change_interface(random.choice(["Ok you got one", "Sus", "Fluke."]),
+                                          random.choice(["(¬､¬)", "(._.)", "ඞ"]))
                     self.player_sink_tally += 1
                     if self.player_sink_tally == 5:
-                        self.change_interface(f"YOU WIN", "ᕙ(  •̀ ᗜ •́  )ᕗ")
+                        self.change_interface("Fine. You win.", "( ╥﹏╥ )")
                         return "player win"
                     else:
                         return "sink"
                 else:
-                    self.change_interface("Hit!", "( °ヮ° )")
+                    self.change_interface(random.choice(["Lucky shot...", "That hurt a bit", "ok fine"]),
+                                          random.choice(["(-.-)", "(¬_¬)", ">:("]))
                     return "hit"
-
+#Bot's check version
         elif target == "player":
             global bot_attack_method, bot_last_hits
             ship_name = self.player_grid[row][col]
@@ -382,6 +389,8 @@ class App(ctk.CTk):
             if ship_name == "":
                 self.player_grid[row][col] = "o"
                 self.bot_cells[row][col].configure(text="⚫", fg_color="#00FF00", font=("Arial", 12, "normal"))
+                self.change_interface(random.choice(["Ugh, I'll get you", "Just warming up", "Next one's yours"]),
+                                      random.choice(["(¬_¬)", "(-.-)", "˙◠˙"]))
                 self.bot_board_label.configure(text="Miss")
                 return "miss"
             else:
@@ -389,7 +398,9 @@ class App(ctk.CTk):
                 self.bot_cells[row][col].configure(fg_color="red", text="🔴", font=("Arial", 12, "normal"))
 
                 if not np.any(self.player_grid == ship_name):
-                    self.change_interface(f"Bot sunk your ship!", "(ᗒᗣᗕ)՞")
+                    self.change_interface(
+                        random.choice(["YOOO I SUNK IT", "Bye bye ship", "Another one down!!"]),
+                        random.choice(["ᕙ(▀̿̿ĺ̯▀̿ ̿)ᕗ", "(ง'̀-'́)ง", "GET REKT"]))
                     self.bot_board_label.configure(text="Sink")
                     # Find the contiguous blob of "x" cells connected to this sink hit
                     # to isolate which hits belong to the ship just sunk
@@ -434,7 +445,8 @@ class App(ctk.CTk):
                         return "bot win"
                     return "sink"
                 else:
-                    self.change_interface("Bot hit your ship!", "(ᗒᗣᗕ)՞")
+                    self.change_interface(random.choice(["HA! Direct hit!", "Gotcha!", "Too easy"]),
+                                          random.choice(["( ≧▽≦)", "(ง •̀_•́)ง", ":V"]))
                     self.bot_board_label.configure(text="Hit")
                     bot_attack_method = "hunt"
                     bot_last_hits.append((row, col))
@@ -487,7 +499,7 @@ class App(ctk.CTk):
         self.confirm_btn.configure(text="Play!!!")
         self.versatile_btn.configure(text="Reset", command=self.full_reset)
         self.auto_attack_btn.configure(text="Auto: OFF", fg_color="#1f6aa5")
-        self.change_interface("Ships placed!", "ദ്ദി(˵ •̀ ᴗ - ˵ ) ✧")
+        self.change_interface("Lazy, do better", "(¬､¬)")
 
     # Auto attack for the player (randomly)
     def run_auto_attack(self):
