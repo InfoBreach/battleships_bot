@@ -663,6 +663,7 @@ def value_to_green_red(v, ship_lengths):
     return f"#{r:02x}{g:02x}00"
 
 
+
 # run
 app = App()
 app.mainloop()
