@@ -4,13 +4,13 @@ A Python-based Battleships implementation featuring an bot opponent and an inter
 
 
 ## Overview
-This project is an interactive implementation of the classic Battleships game, developed in Python using CustomTkinter for the interface and NumPy for grid management.
+This project is an interactive implementation of the Battleships game, developed in Python using CustomTkinter for the interface and NumPy for grid management.
 
 The application includes a player-versus-bot system in which the bot uses probability-based analysis and targeted search strategies to make informed decisions rather than relying on random selection.
 
 ## Extra Features
 - Automatic ship placement
-- Auto-attack mode
+- Auto-attack, auto replay mode
 - Real-time heatmap visualization of the bot's decisions
 - Turn tracking and win/loss detection
 
@@ -66,11 +66,9 @@ Will be switch over after a successful hit. Targets adjacent cells to locate the
 #### For more info, look inside the Flowchart folder.
 ![Flowchart](flowchart/)
 
-## Limitations
-- No auto-repeate features for display
-- Use of global variables for bot states
-- Still bug if multiple ships are next to each other (To complicated to fix)
-- No sound effects :)
+### Changes:
+- Can now find all ships in a cluster, no more adjacent ship problems.
+- auto replay for display
 
 ## Contributers:
 Tran Thien Khanh - 11525082 , Nguyen Cong Gia Tri - 11525064
