@@ -277,7 +277,9 @@ class App(ctk.CTk):
         self.turns = 0
 
         self._build_ui()
-
+        self.font_normal = ctk.CTkFont("Arial", 12, "normal")
+        self.font_bold = ctk.CTkFont("Arial", 16, "bold")
+        self.font_hunt = ctk.CTkFont("Arial", 12, "bold")
     # Creates UIs
 
     def _build_ui(self):
@@ -362,7 +364,7 @@ class App(ctk.CTk):
                 cells[i][j].configure(fg_color="#00FF00", text="", border_width=0, border_color="#00FF00")
 
     def update_heatmap_display(self):
-        #Redraw the overlay after every move
+        # Redraw the overlay after every move
         playing = self.player_board.playing_grid
 
         # If game over, dont update
@@ -372,6 +374,7 @@ class App(ctk.CTk):
                     if playing[i][j] == "":
                         self.bot_cells[i][j].configure(fg_color="#00FF00", text="")
             return
+
         # Heatmap overlay
         if self.bot_ai.attack_method == "scan":
             max_score = self.bot_ai.max_heat_score
@@ -383,19 +386,22 @@ class App(ctk.CTk):
                         score = int(self.bot_ai.heat_grid[i][j])
                         text = f"{score}!" if (i, j) in best_cells else str(score)
 
+                        # Use the pre-cached fonts here
+                        current_font = self.font_bold if (i, j) in best_cells else self.font_normal
+
                         self.bot_cells[i][j].configure(
                             fg_color=heat_color(score, max_score),
                             text=text,
-                            font=("Arial", 16 if (i, j) in best_cells else 12,
-                                  "bold" if (i, j) in best_cells else "normal")
-                    )
+                            font=current_font
+                        )
 
-        #Adjacent overlay (still uses the old hunt algorithm to display since its clearer to be as overlay)
+        # Adjacent overlay
         else:
             for i in range(SIZE):
                 for j in range(SIZE):
                     if playing[i][j] == "":
-                        self.bot_cells[i][j].configure(fg_color="#00FF00", text="", font=("Arial", 12, "normal"))
+                        self.bot_cells[i][j].configure(fg_color="#00FF00", text="", font=self.font_normal)
+
             candidates = []
             for hr, hc in self.bot_ai.last_hits:
                 for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
@@ -404,12 +410,14 @@ class App(ctk.CTk):
                             and playing[nr][nc] == ""
                             and (nr, nc) not in candidates):
                         candidates.append((nr, nc))
+
             if len(self.bot_ai.last_hits) > 1:
                 aligned = self.bot_ai._aligned_candidates(candidates)
                 if aligned:
                     candidates = aligned
+
             for x, y in candidates:
-                self.bot_cells[x][y].configure(fg_color="yellow", text="?", font=("Arial", 12, "bold"))
+                self.bot_cells[x][y].configure(fg_color="yellow", text="?", font=self.font_hunt)
 
     # Ship placement phase
 
